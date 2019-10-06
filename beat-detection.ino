@@ -1,6 +1,6 @@
 // FHT, see http://wiki.openmusiclabs.com/wiki/ArduinoFHT
 #define LOG_OUT 1 // use the log output function
-#define FHT_N 256 // set to 256 point fht
+#define FHT_N 128 // amount of bins to use
 #include <FHT.h> // include the library
 
 #define FreqLog // use log scale for FHT frequencies
@@ -42,15 +42,15 @@ const int FIRST_FREQUENCY_RANGE_START = 2;
 const int FIRST_FREQUENCY_RANGE_END = 4;
 const int FIRST_FREQUENCY_RANGE = FIRST_FREQUENCY_RANGE_END - FIRST_FREQUENCY_RANGE_START;
 
-const int SECOND_FREQUENCY_RANGE_START = 4;
-const int SECOND_FREQUENCY_RANGE_END = 8;
+const int SECOND_FREQUENCY_RANGE_START = 2;
+const int SECOND_FREQUENCY_RANGE_END = 6;
 const int SECOND_FREQUENCY_RANGE = SECOND_FREQUENCY_RANGE_END - SECOND_FREQUENCY_RANGE_START;
 
 const int MAXIMUM_BEATS_PER_SECOND = 200;
 const int MINIMUM_DELAY_BETWEEN_BEATS = 60000L / MAXIMUM_BEATS_PER_SECOND;
 const int SINGLE_BEAT_DURATION = 150; // good value range is [50:150]
 
-const int FREQUENCY_MAGNITUDE_SAMPLES = 5; // good value range is [5:15]
+const int FREQUENCY_MAGNITUDE_SAMPLES = 10; // good value range is [5:15]
 
 int frequencyMagnitudeSampleIndex = 0;
 
@@ -58,25 +58,25 @@ int currentOverallFrequencyMagnitude = 0;
 int totalOverallFrequencyMagnitude = 0;
 int averageOverallFrequencyMagnitude = 0;
 int overallFrequencyMagnitudeVariance = 0;
-unsigned char overallFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
+byte overallFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
 
 int currentFirstFrequencyMagnitude = 0;
 int totalFirstFrequencyMagnitude = 0;
 int averageFirstFrequencyMagnitude = 0;
 int firstFrequencyMagnitudeVariance = 0;
-unsigned char firstFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
+byte firstFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
 
 int currentSecondFrequencyMagnitude = 0;
 int totalSecondFrequencyMagnitude = 0;
 int averageSecondFrequencyMagnitude = 0;
 int secondFrequencyMagnitudeVariance = 0;
-unsigned char secondFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
+byte secondFrequencyMagnitudes[FREQUENCY_MAGNITUDE_SAMPLES];
 
 int currentSignal = 0;
 int totalSignal = 0;
 int averageSignal = 0;
 int signalVariance = 0;
-unsigned char signals[FREQUENCY_MAGNITUDE_SAMPLES];
+byte signals[FREQUENCY_MAGNITUDE_SAMPLES];
 
 long lastBeatTimestamp = 0;
 long durationSinceLastBeat = 0;
@@ -135,7 +135,7 @@ void loop() {
     getFrequencyData();
     logFrequencyData();
   } else {
-    //Serial.print(String(millis()));
+    Serial.print(String(millis()));
     readAudioSamples();
     if (PERFORM_BEAT_DETECTION) {
       getFrequencyData();
@@ -191,7 +191,7 @@ void readAudioSamples() {
     
   //logValue("A", (float) currentAverage / 1024, 10);
   //logValue("M", (float) currentMaximum / 1024, 10);
-  //logValue("S", (float) currentSignal / 64, 5);
+  logValue("S", (float) currentSignal / 512, 10);
 }
 
 /**
@@ -292,11 +292,11 @@ void processSecondFrequencyMagnitude() {
   );
 }
 
-unsigned char getFrequencyMagnitude(unsigned char frequencies[], const int startIndex, const int endIndex) {
+byte getFrequencyMagnitude(byte frequencies[], const int startIndex, const int endIndex) {
   int total = 0;
   int average = 0;
   int maximum = 0;
-  int minimum = 256;
+  int minimum = 1024;
   int current;
   
   for (int i = startIndex; i < endIndex; i++) {
@@ -316,9 +316,9 @@ unsigned char getFrequencyMagnitude(unsigned char frequencies[], const int start
   return value;
 }
 
-void processHistoryValues(unsigned char history[], int &historyIndex, int &current, int &total, int &average, int &variance) {
+void processHistoryValues(byte history[], int &historyIndex, int &current, int &total, int &average, int &variance) {
   total -= history[historyIndex]; // subtract the oldest history value from the total
-  total += current; // add the current value to the total
+  total += (byte) current; // add the current value to the total
   history[historyIndex] = current; // add the current value to the history
   
   average = total / FREQUENCY_MAGNITUDE_SAMPLES;
@@ -361,13 +361,11 @@ float calculateSignalChangeFactor() {
     aboveAverageSignalFactor = 0;
   } else {
     aboveAverageSignalFactor = ((float) currentSignal / averageSignal);
-    //aboveAverageSignalFactor -= 1;
-    //aboveAverageSignalFactor *= 10;
     aboveAverageSignalFactor = constrain(aboveAverageSignalFactor, 0, 2);
   }
   
-  //logValue("SC", (float) currentSignal / 10, 10);
-  //logValue("SA", (float) averageSignal / 10, 10);
+  //logValue("SC", (float) currentSignal / 512, 10);
+  //logValue("SA", (float) averageSignal / 512, 10);
   logValue("SF", aboveAverageSignalFactor / 2, 2);
   return aboveAverageSignalFactor;
 }
@@ -390,7 +388,7 @@ float calculateMagnitudeChangeFactor() {
   // current overall magnitude is higher than the average, probably 
   // because the signal is mainly noise
   float aboveAverageOverallMagnitudeFactor = ((float) currentOverallFrequencyMagnitude / averageOverallFrequencyMagnitude);
-  aboveAverageOverallMagnitudeFactor -= 1.20;
+  aboveAverageOverallMagnitudeFactor -= 1.15;
   aboveAverageOverallMagnitudeFactor *= 10;
   aboveAverageOverallMagnitudeFactor = constrain(aboveAverageOverallMagnitudeFactor, 0, 1);
   
@@ -399,13 +397,14 @@ float calculateMagnitudeChangeFactor() {
   float aboveAverageFirstMagnitudeFactor = ((float) currentFirstFrequencyMagnitude / averageFirstFrequencyMagnitude);
   aboveAverageFirstMagnitudeFactor -= changeThresholdFactor;
   //aboveAverageFirstMagnitudeFactor *= 1 / (changeThresholdFactor - 1);
-  aboveAverageFirstMagnitudeFactor *= 2;
+  aboveAverageFirstMagnitudeFactor *= 10;
   aboveAverageFirstMagnitudeFactor = constrain(aboveAverageFirstMagnitudeFactor, 0, 1);
   
   float aboveAverageSecondMagnitudeFactor = ((float) currentSecondFrequencyMagnitude / averageSecondFrequencyMagnitude);
   aboveAverageSecondMagnitudeFactor -= changeThresholdFactor;
+  aboveAverageFirstMagnitudeFactor -= 0.10;
   //aboveAverageSecondMagnitudeFactor *= 1 / (changeThresholdFactor - 1);
-  aboveAverageSecondMagnitudeFactor *= 3;
+  aboveAverageSecondMagnitudeFactor *= 5;
   aboveAverageSecondMagnitudeFactor = constrain(aboveAverageSecondMagnitudeFactor, 0, 1);
   
   float magnitudeChangeFactor = aboveAverageFirstMagnitudeFactor;
@@ -431,7 +430,7 @@ float calculateMagnitudeChangeFactor() {
   //logValue("C1", (currentFirstFrequencyMagnitude) / maximumMagnitude, 10);
   //logValue("C2", (currentSecondFrequencyMagnitude) / maximumMagnitude, 10);
 
-  logValue("AO", aboveAverageOverallMagnitudeFactor, 1);
+  logValue("AO", aboveAverageOverallMagnitudeFactor, 2);
   logValue("A1", aboveAverageFirstMagnitudeFactor, 5);
   logValue("A2", aboveAverageSecondMagnitudeFactor, 5);
   //logValue("A1|2", max(aboveAverageFirstMagnitudeFactor, aboveAverageSecondMagnitudeFactor), 1);
@@ -526,7 +525,7 @@ void updateLights() {
   // scale the intensity to be in range of maximum and minimum
   float scaledLightIntensity = MINIMUM_LIGHT_INTENSITY + (lightIntensityValue * (MAXIMUM_LIGHT_INTENSITY - MINIMUM_LIGHT_INTENSITY));
   
-  logValue("L", scaledLightIntensity, 10);
+  logValue("L", scaledLightIntensity, 5);
   
   int pinValue = 255 * scaledLightIntensity;
   analogWrite(HAT_LIGHTS_PIN, pinValue);
@@ -550,7 +549,7 @@ void updateLights() {
   // scale the intensity to be in range of maximum and minimum
   scaledLightIntensity = MINIMUM_LIGHT_INTENSITY + (fadeFactor * (MAXIMUM_LIGHT_INTENSITY - MINIMUM_LIGHT_INTENSITY));
   
-  logValue("P", scaledLightIntensity, 10);
+  //logValue("P", scaledLightIntensity, 10);
   
   pinValue = 255 * scaledLightIntensity;
   analogWrite(HAT_LIGHTS_PULSE_PIN, pinValue);
