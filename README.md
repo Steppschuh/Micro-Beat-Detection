@@ -1,7 +1,7 @@
-# Micro Beat Detection
-======================
+Micro Beat Detection
+====================
 
-This project uses analog input from sound sensors to detect beats in real-time on microcontrollers. It has been tuned for EDM music and was tested during festivals as well as in home environments.
+This project uses analog input from sound sensors to detect beats in real-time on microcontrollers. It has been tuned for EDM and was tested during festivals as well as in home environments.
 
 `Insert GIF`
 
