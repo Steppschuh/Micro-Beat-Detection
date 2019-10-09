@@ -27,12 +27,12 @@ const int HAT_LIGHTS_LOW_PIN = 11; // D11
 const int HAT_LIGHTS_HIGH_PIN = 12; // D12
 const int HAT_LIGHTS_PULSE_PIN = 13; // D13
 
-const int LIGHT_PULSE_DELAY = 15000;
+const int LIGHT_PULSE_DELAY = 10000;
 const int LIGHT_PULSE_DURATION = 2000;
 
-const int LIGHT_FADE_OUT_DURATION = 500; // good value range is [100:1000]
+const int LIGHT_FADE_OUT_DURATION = 750; // good value range is [100:1000]
 const float MINIMUM_LIGHT_INTENSITY = 0.05; // in range [0:1]
-const float MAXIMUM_LIGHT_INTENSITY = 0.3; // in range [0:1]
+const float MAXIMUM_LIGHT_INTENSITY = 0.15; // in range [0:1]
 
 const int OVERALL_FREQUENCY_RANGE_START = 2; // should be 0, but frist 2 bands produce too much noise
 const int OVERALL_FREQUENCY_RANGE_END = FHT_N / 2;
@@ -46,11 +46,11 @@ const int SECOND_FREQUENCY_RANGE_START = 2;
 const int SECOND_FREQUENCY_RANGE_END = 6;
 const int SECOND_FREQUENCY_RANGE = SECOND_FREQUENCY_RANGE_END - SECOND_FREQUENCY_RANGE_START;
 
-const int MAXIMUM_BEATS_PER_SECOND = 200;
-const int MINIMUM_DELAY_BETWEEN_BEATS = 60000L / MAXIMUM_BEATS_PER_SECOND;
-const int SINGLE_BEAT_DURATION = 150; // good value range is [50:150]
+const int MAXIMUM_BEATS_PER_MINUTE = 200;
+const int MINIMUM_DELAY_BETWEEN_BEATS = 60000L / MAXIMUM_BEATS_PER_MINUTE;
+const int SINGLE_BEAT_DURATION = 100; // good value range is [50:150]
 
-const int FREQUENCY_MAGNITUDE_SAMPLES = 10; // good value range is [5:15]
+const int FREQUENCY_MAGNITUDE_SAMPLES = 5; // good value range is [5:15]
 
 int frequencyMagnitudeSampleIndex = 0;
 
@@ -376,7 +376,7 @@ float calculateSignalChangeFactor() {
  * Low values are indicating a low beat probability.
  */
 float calculateMagnitudeChangeFactor() {
-  float changeThresholdFactor = 1.15;
+  float changeThresholdFactor = 1.125;
   if (durationSinceLastBeat < 750) {
     // attempt to not miss consecutive beats
     changeThresholdFactor *= 0.95;
@@ -388,7 +388,7 @@ float calculateMagnitudeChangeFactor() {
   // current overall magnitude is higher than the average, probably 
   // because the signal is mainly noise
   float aboveAverageOverallMagnitudeFactor = ((float) currentOverallFrequencyMagnitude / averageOverallFrequencyMagnitude);
-  aboveAverageOverallMagnitudeFactor -= 1.15;
+  aboveAverageOverallMagnitudeFactor -= 1.1;
   aboveAverageOverallMagnitudeFactor *= 10;
   aboveAverageOverallMagnitudeFactor = constrain(aboveAverageOverallMagnitudeFactor, 0, 1);
   
@@ -402,9 +402,8 @@ float calculateMagnitudeChangeFactor() {
   
   float aboveAverageSecondMagnitudeFactor = ((float) currentSecondFrequencyMagnitude / averageSecondFrequencyMagnitude);
   aboveAverageSecondMagnitudeFactor -= changeThresholdFactor;
-  aboveAverageFirstMagnitudeFactor -= 0.10;
   //aboveAverageSecondMagnitudeFactor *= 1 / (changeThresholdFactor - 1);
-  aboveAverageSecondMagnitudeFactor *= 5;
+  aboveAverageSecondMagnitudeFactor *= 10;
   aboveAverageSecondMagnitudeFactor = constrain(aboveAverageSecondMagnitudeFactor, 0, 1);
   
   float magnitudeChangeFactor = aboveAverageFirstMagnitudeFactor;
@@ -448,10 +447,10 @@ float calculateMagnitudeChangeFactor() {
  */
 float calculateVarianceFactor() {
   // a beat also requires a high variance in recent frequency magnitudes
-  float firstVarianceFactor = ((float) (firstFrequencyMagnitudeVariance - 50) / 10) - 1;
+  float firstVarianceFactor = ((float) (firstFrequencyMagnitudeVariance - 50) / 20) - 1;
   firstVarianceFactor = constrain(firstVarianceFactor, 0, 1);
   
-  float secondVarianceFactor = ((float) (secondFrequencyMagnitudeVariance - 50) / 10) - 1;
+  float secondVarianceFactor = ((float) (secondFrequencyMagnitudeVariance - 50) / 20) - 1;
   secondVarianceFactor = constrain(secondVarianceFactor, 0, 1);
   
   float varianceFactor = max(firstVarianceFactor, secondVarianceFactor);
@@ -525,7 +524,7 @@ void updateLights() {
   // scale the intensity to be in range of maximum and minimum
   float scaledLightIntensity = MINIMUM_LIGHT_INTENSITY + (lightIntensityValue * (MAXIMUM_LIGHT_INTENSITY - MINIMUM_LIGHT_INTENSITY));
   
-  logValue("L", scaledLightIntensity, 5);
+  logValue("L", scaledLightIntensity, 10);
   
   int pinValue = 255 * scaledLightIntensity;
   analogWrite(HAT_LIGHTS_PIN, pinValue);
