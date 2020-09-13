@@ -32,7 +32,7 @@ const int LIGHT_PULSE_DURATION = 2000;
 
 const int LIGHT_FADE_OUT_DURATION = 750; // good value range is [100:1000]
 const float MINIMUM_LIGHT_INTENSITY = 0.05; // in range [0:1]
-const float MAXIMUM_LIGHT_INTENSITY = 0.15; // in range [0:1]
+const float MAXIMUM_LIGHT_INTENSITY = 0.25; // in range [0:1]
 
 const int OVERALL_FREQUENCY_RANGE_START = 2; // should be 0, but frist 2 bands produce too much noise
 const int OVERALL_FREQUENCY_RANGE_END = FHT_N / 2;
@@ -357,7 +357,7 @@ void updateBeatProbability() {
  */
 float calculateSignalChangeFactor() {
   float aboveAverageSignalFactor;
-  if (averageSignal < 2 || currentSignal < 3) {
+  if (averageSignal < 75 || currentSignal < 150) {
     aboveAverageSignalFactor = 0;
   } else {
     aboveAverageSignalFactor = ((float) currentSignal / averageSignal);
@@ -376,7 +376,7 @@ float calculateSignalChangeFactor() {
  * Low values are indicating a low beat probability.
  */
 float calculateMagnitudeChangeFactor() {
-  float changeThresholdFactor = 1.125;
+  float changeThresholdFactor = 1.1;
   if (durationSinceLastBeat < 750) {
     // attempt to not miss consecutive beats
     changeThresholdFactor *= 0.95;
@@ -388,26 +388,28 @@ float calculateMagnitudeChangeFactor() {
   // current overall magnitude is higher than the average, probably 
   // because the signal is mainly noise
   float aboveAverageOverallMagnitudeFactor = ((float) currentOverallFrequencyMagnitude / averageOverallFrequencyMagnitude);
-  aboveAverageOverallMagnitudeFactor -= 1.1;
+  aboveAverageOverallMagnitudeFactor -= 1.05;
   aboveAverageOverallMagnitudeFactor *= 10;
   aboveAverageOverallMagnitudeFactor = constrain(aboveAverageOverallMagnitudeFactor, 0, 1);
   
   // current magnitude is higher than the average, probably 
   // because the there's a beat right now
   float aboveAverageFirstMagnitudeFactor = ((float) currentFirstFrequencyMagnitude / averageFirstFrequencyMagnitude);
-  aboveAverageFirstMagnitudeFactor -= changeThresholdFactor;
-  //aboveAverageFirstMagnitudeFactor *= 1 / (changeThresholdFactor - 1);
-  aboveAverageFirstMagnitudeFactor *= 10;
+  aboveAverageOverallMagnitudeFactor -= 0.1;
+  aboveAverageFirstMagnitudeFactor *= 1.5;
+  aboveAverageFirstMagnitudeFactor = pow(aboveAverageFirstMagnitudeFactor, 3);
+  aboveAverageFirstMagnitudeFactor /= 3;
+  aboveAverageFirstMagnitudeFactor -= 1.25;
+  
   aboveAverageFirstMagnitudeFactor = constrain(aboveAverageFirstMagnitudeFactor, 0, 1);
   
   float aboveAverageSecondMagnitudeFactor = ((float) currentSecondFrequencyMagnitude / averageSecondFrequencyMagnitude);
-  aboveAverageSecondMagnitudeFactor -= changeThresholdFactor;
-  //aboveAverageSecondMagnitudeFactor *= 1 / (changeThresholdFactor - 1);
+  aboveAverageSecondMagnitudeFactor -= 1.01;
   aboveAverageSecondMagnitudeFactor *= 10;
   aboveAverageSecondMagnitudeFactor = constrain(aboveAverageSecondMagnitudeFactor, 0, 1);
   
   float magnitudeChangeFactor = aboveAverageFirstMagnitudeFactor;
-  if (magnitudeChangeFactor > 0.1) {
+  if (magnitudeChangeFactor > 0.15) {
     magnitudeChangeFactor = max(aboveAverageFirstMagnitudeFactor, aboveAverageSecondMagnitudeFactor);
   }
   
@@ -430,8 +432,8 @@ float calculateMagnitudeChangeFactor() {
   //logValue("C2", (currentSecondFrequencyMagnitude) / maximumMagnitude, 10);
 
   logValue("AO", aboveAverageOverallMagnitudeFactor, 2);
-  logValue("A1", aboveAverageFirstMagnitudeFactor, 5);
-  logValue("A2", aboveAverageSecondMagnitudeFactor, 5);
+  logValue("A1", aboveAverageFirstMagnitudeFactor, 10);
+  logValue("A2", aboveAverageSecondMagnitudeFactor, 10);
   //logValue("A1|2", max(aboveAverageFirstMagnitudeFactor, aboveAverageSecondMagnitudeFactor), 1);
   
   logValue("M", magnitudeChangeFactor, 1);
@@ -472,7 +474,7 @@ float calculateRecencyFactor() {
   recencyFactor = 1 - ((float) referenceDuration / durationSinceLastBeat);
   recencyFactor = constrain(recencyFactor, 0, 1);
   
-  logValue("R", recencyFactor, 5);
+  //logValue("R", recencyFactor, 5);
   
   return recencyFactor;
 }
@@ -524,7 +526,7 @@ void updateLights() {
   // scale the intensity to be in range of maximum and minimum
   float scaledLightIntensity = MINIMUM_LIGHT_INTENSITY + (lightIntensityValue * (MAXIMUM_LIGHT_INTENSITY - MINIMUM_LIGHT_INTENSITY));
   
-  logValue("L", scaledLightIntensity, 10);
+  logValue("L", scaledLightIntensity, 5);
   
   int pinValue = 255 * scaledLightIntensity;
   analogWrite(HAT_LIGHTS_PIN, pinValue);
