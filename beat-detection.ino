@@ -19,7 +19,7 @@ const bool LOG_FREQUENCY_DATA = false;
 
 // Set to true if the light should be based on detected beats instead
 // of detected amplitudes.
-const bool PERFORM_BEAT_DETECTION = true;
+const bool PERFORM_BEAT_DETECTION = false;
 
 const int SOUND_REFERENCE_PIN = 8; // D8
 const int HAT_LIGHTS_PIN = 9; // D9
@@ -30,9 +30,11 @@ const int HAT_LIGHTS_PULSE_PIN = 13; // D13
 const int LIGHT_PULSE_DELAY = 10000;
 const int LIGHT_PULSE_DURATION = 2000;
 
-const int LIGHT_FADE_OUT_DURATION = 750; // good value range is [100:1000]
-const float MINIMUM_LIGHT_INTENSITY = 0.05; // in range [0:1]
-const float MAXIMUM_LIGHT_INTENSITY = 0.25; // in range [0:1]
+const int LIGHT_FADE_OUT_DURATION = 500; // good value range is [100:1000]
+const float MINIMUM_LIGHT_INTENSITY = 0.01; // in range [0:1]
+const float MAXIMUM_LIGHT_INTENSITY = 0.2; // in range [0:1]
+
+const int MAXIMUM_SIGNAL_VALUE = 1024;
 
 const int OVERALL_FREQUENCY_RANGE_START = 2; // should be 0, but frist 2 bands produce too much noise
 const int OVERALL_FREQUENCY_RANGE_END = FHT_N / 2;
@@ -156,7 +158,7 @@ void loop() {
 void readAudioSamples() {
   long currentAverage = 0;
   long currentMaximum = 0;
-  long currentMinimum = 1024;
+  long currentMinimum = MAXIMUM_SIGNAL_VALUE;
   
   for (int i = 0; i < FHT_N; i++) { // save 256 samples
     while (!(ADCSRA & /*0x10*/_BV(ADIF))); // wait for adc to be ready (ADIF)
@@ -178,7 +180,10 @@ void readAudioSamples() {
   
   currentAverage /= FHT_N;
   
-  currentSignal = (currentMaximum - currentAverage);
+  int signalDelta = currentMaximum - currentAverage;
+  currentSignal = currentAverage + (2 * signalDelta);
+  
+  constrain(currentSignal, 0, currentMaximum);
   
   processHistoryValues(
     signals, 
@@ -188,10 +193,10 @@ void readAudioSamples() {
     averageSignal, 
     signalVariance
   );
-    
-  //logValue("A", (float) currentAverage / 1024, 10);
-  //logValue("M", (float) currentMaximum / 1024, 10);
-  logValue("S", (float) currentSignal / 512, 10);
+  
+  //logValue("A", (float) currentAverage / MAXIMUM_SIGNAL_VALUE, 10);
+  //logValue("M", (float) currentMaximum / MAXIMUM_SIGNAL_VALUE, 10);
+  logValue("S", (float) currentSignal / MAXIMUM_SIGNAL_VALUE, 20);
 }
 
 /**
@@ -296,7 +301,7 @@ byte getFrequencyMagnitude(byte frequencies[], const int startIndex, const int e
   int total = 0;
   int average = 0;
   int maximum = 0;
-  int minimum = 1024;
+  int minimum = MAXIMUM_SIGNAL_VALUE;
   int current;
   
   for (int i = startIndex; i < endIndex; i++) {
@@ -483,11 +488,11 @@ float calculateRecencyFactor() {
  * Will update the light intensity bump based on the recency of detected beats.
  */
 void updateLightIntensityBasedOnBeats() {
-  float lightsIntensity = 1 - ((float) durationSinceLastBeat / LIGHT_FADE_OUT_DURATION);
-  lightsIntensity = constrain(lightsIntensity, 0, 1);
+  float intensity = 1 - ((float) durationSinceLastBeat / LIGHT_FADE_OUT_DURATION);
+  intensity = constrain(intensity, 0, 1);
   
-  if (lightsIntensity > lightIntensityValue) {
-    lightIntensityBumpValue = lightsIntensity;
+  if (intensity > lightIntensityValue) {
+    lightIntensityBumpValue = intensity;
     lightIntensityBumpTimestamp = millis();
   }
 }
@@ -496,18 +501,26 @@ void updateLightIntensityBasedOnBeats() {
  * Will update the light intensity bump based on measured amplitudes.
  */
 void updateLightIntensityBasedOnAmplitudes() {
-  float lightsIntensity;
-  if (averageSignal < 2 || currentSignal < 2) {
-    lightsIntensity = 0;
+  float intensity;
+  if (averageSignal < 1 || currentSignal < 1) {
+    intensity = 0;
   } else {
-    int maximumSignal = max(5 * averageSignal, currentSignal);
-    lightsIntensity = (float) (currentSignal - averageSignal) / maximumSignal;
+    intensity = (float) (currentSignal - averageSignal) / MAXIMUM_SIGNAL_VALUE;
+    intensity *= pow(intensity, 3);
+    
+    if (intensity < 0.1) {
+      intensity = 0;
+    } else {
+      intensity -= 0.1;
+      intensity = pow(1 + intensity, 3) - 1;
+      intensity = constrain(intensity, 0, 1);
+    }
   }
   
-  lightsIntensity = constrain(lightsIntensity, 0, 1);
+  logValue("I", intensity, 10);
   
-  if (lightsIntensity > lightIntensityValue) {
-    lightIntensityBumpValue = lightsIntensity;
+  if (intensity > lightIntensityValue) {
+    lightIntensityBumpValue = intensity;
     lightIntensityBumpTimestamp = millis();
   }
 }
@@ -523,10 +536,10 @@ void updateLights() {
   lightIntensityValue = lightIntensityBumpValue * fadeFactor;
   lightIntensityValue = constrain(lightIntensityValue, 0, 1);
   
+  logValue("L", lightIntensityValue, 20);
+  
   // scale the intensity to be in range of maximum and minimum
   float scaledLightIntensity = MINIMUM_LIGHT_INTENSITY + (lightIntensityValue * (MAXIMUM_LIGHT_INTENSITY - MINIMUM_LIGHT_INTENSITY));
-  
-  logValue("L", scaledLightIntensity, 5);
   
   int pinValue = 255 * scaledLightIntensity;
   analogWrite(HAT_LIGHTS_PIN, pinValue);
