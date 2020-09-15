@@ -3,7 +3,7 @@ Micro Beat Detection
 
 This project uses analog input from sound sensors to detect beats on microcontrollers in real-time. It's lightweight enough to run on Arduino Nano compatible boards (e.g. using the ATMEGA168 or ATMEGA328P). It has been tuned for EDM and was tested during festivals as well as in home environments.
 
-![Festival Hat](festival-hat.gif)
+[![Festival Hat](festival-hat.gif)](https://youtu.be/zm84h40ejuw)
 
 Showcased above is an audio reactive festival hat with LEDs that light up in sync with the music, you can watch a full video with sound [here](https://youtu.be/zm84h40ejuw).
 
