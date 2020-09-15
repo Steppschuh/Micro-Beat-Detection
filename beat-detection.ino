@@ -36,7 +36,7 @@ const float MAXIMUM_LIGHT_INTENSITY = 0.2; // in range [0:1]
 
 const int MAXIMUM_SIGNAL_VALUE = 1024;
 
-const int OVERALL_FREQUENCY_RANGE_START = 2; // should be 0, but frist 2 bands produce too much noise
+const int OVERALL_FREQUENCY_RANGE_START = 2; // should be 0, but first 2 bands produce too much noise
 const int OVERALL_FREQUENCY_RANGE_END = FHT_N / 2;
 const int OVERALL_FREQUENCY_RANGE = OVERALL_FREQUENCY_RANGE_END - OVERALL_FREQUENCY_RANGE_START;
 
