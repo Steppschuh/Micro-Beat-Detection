@@ -5,7 +5,7 @@ This project uses analog input from sound sensors to detect beats on microcontro
 
 ![Festival Hat](festival-hat.gif)
 
-Showcased above is a festival hat with LEDs that light up in sync with the music, you can read more about it [here](https://medium.com/@Steppschuh).
+Showcased above is an audio reactive festival hat with LEDs that light up in sync with the music, you can watch a full video with sound [here](https://youtu.be/zm84h40ejuw).
 
 ## How It Works
 
@@ -19,7 +19,7 @@ That means that changes in _loudness_ (e.g. caused by a clap in a silent room) w
 
 Connect the analog output of a microphone (e.g. the [MAX9814](https://www.adafruit.com/product/1713)) to pin `A0`. This pin will be configured to allow faster sampling from analog input. Refer to [this](http://yaab-arduino.blogspot.com/2015/02/fast-sampling-from-analog-input.htm) to learn more.
 
-Deploy the '.ino' file onto your microcontroller. Without any modifications, you should see the onboard LED flashing up for each detected beat. You can also connect an external LED to pin `D9` to see the beat detection output.
+Deploy the `.ino` file onto your microcontroller. Without any modifications, you should see the onboard LED flashing up for each detected beat. You can also connect an external LED to pin `D9` to see the beat detection output.
 
 To get an idea of what the beat detection is thinking, connect to the serial port with a baut rate of `115200`.
 
